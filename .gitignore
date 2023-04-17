@@ -1,0 +1,18 @@
+# Glob
+.DS_Store
+*~
+*.so
+*.swp
+*.mchg
+*.pyc
+*.pbxuser
+*.mode1v3
+*.bak
+*.prefs
+*.iml
+.idea
+.gradle
+Thumbs.db
+.svn
+local.properties
+build

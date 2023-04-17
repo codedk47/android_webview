@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width,initial-scale=1">
+		<style>
+			html{
+				background-color: black;
+			}
+			pre{
+				padding: 0 1rem;
+				color:lightgreen;
+				font-family: consolas, monospace;
+				font-size: 1rem;
+				line-height: 1.6rem;
+			}
+		</style>
+		<script>
+			addEventListener('message', event =>
+			{
+				if (event.data === null)
+				{
+					return document.querySelector('form').style.display = 'block';
+				}
+				const
+					out = 8000, //timeout millisecond
+					net = navigator.connection,
+					pre = document.querySelector('pre')
+					log = message => pre.appendChild(document.createTextNode(`${message}\n`))
+				websockets = event.data.split(',').map(origin => new WebSocket(origin)),
+				abort = message =>
+				{
+					websockets.forEach(websocket => websocket.close(1000));
+					message && log(message);
+				},
+				timer = setTimeout(abort, out, 'route line timeout'),
+				gone = message =>
+				{
+					log(message);
+				},
+				entry = urls =>
+				{
+					const
+					controller = new AbortController,
+					timer = setTimeout(() => controller.abort() || log('fastest line timeout'), out);
+					log('fastest line testing...');
+					Promise.any(urls.split(',').map(origin => fetch(origin, {cache: 'no-cache', signal: controller.signal}).then(async response =>
+					{
+						log('data pending...');
+						await response.blob();
+						return response.url;
+					}))).then(url =>
+					{
+						clearTimeout(timer);
+						controller.abort();
+						log('app frame loading...');
+						location.assign(url);
+					}, () => gone('network status is busy\nplease try again later'));
+				};
+				log(`connection:\neffectiveType = ${net.effectiveType}\nrtt = ${net.rtt}ms\ndownlink = ${net.downlink}Mb/s\nroute line loading...`);
+				Promise.any(websockets.map(websocket => new Promise((resolve, reject) =>
+				{
+					websocket.onmessage = event => localStorage.setItem('urls', event.data) || resolve(event.data);
+					websocket.onerror = websocket.onclose = reject;
+				}))).then(urls =>
+				{
+					clearTimeout(timer);
+					abort('route line done');
+					entry(urls);
+				}, urls =>
+				{
+					if (urls = localStorage.getItem('urls'))
+					{
+						log('from local cache');
+						entry(urls);
+					}
+					else
+					{
+						gone('local cache miss');
+					}
+				});
+			});
+			function test_open()
+			{
+				const test = open('https://www.google.com/');
+				requestAnimationFrame(function closed()
+				{
+					test.window ? requestAnimationFrame(closed) : alert('Create window closed');
+				});
+			}
+			function file_chooser(element)
+			{
+				alert(element.files)
+			}
+		</script>
+	</head>
+	<body><pre></pre>
+		<form style="background-color:white;display:none;" onsubmit="return false">
+			<fieldset>
+				<legend>onCreateWindow</legend>
+				<button onclick="test_open(this)">Create new window</button>
+			</fieldset>
+			<fieldset>
+				<legend>showFileChooser</legend>
+				<label><input type="file" accept="image/*" style="display:none;" onchange="file_chooser(this)"/>File chooser</label>
+			</fieldset>
+			<fieldset>
+				<legend>handleJsAlert</legend>
+				<button onclick="alert(this.textContent)">This alert contents.</button>
+			</fieldset>
+			<fieldset>
+				<legend>handleJsConfirm</legend>
+				<button onclick="alert(confirm(this.textContent))">This confirm contents.</button>
+			</fieldset>
+			<fieldset>
+				<legend>handleJsPrompt</legend>
+				<button onclick="alert(prompt(this.textContent, 'Here default value'))">This prompt contents.</button>
+			</fieldset>
+			<fieldset>
+				<legend>Startup scheme test</legend>
+				<ul style="margin:0;padding:0 1rem;line-height:2rem">
+					<li><a href="tg://" target="_blank">Telegram</a></li>
+					<li><a href="weixin://" target="_blank">We Chat</a></li>
+					<li><a href="alipay://" target="_blank">Ali Pay</a></li>
+				</ul>
+			</fieldset>
+		</form>
+	</body>
+</html>
