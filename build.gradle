@@ -18,11 +18,12 @@ allprojects {
     }
 }
 
-apply plugin: 'com.android.library'
+//apply plugin: 'com.android.library'
+apply plugin: 'com.android.application'
 apply plugin: 'com.github.dcendents.android-maven'
 apply plugin: 'com.google.protobuf'
 
-group = 'com.github.ridi'
+group = 'com.webapp.webview'
 version = '93.0.4577.82-1'
 
 android {
@@ -38,10 +39,20 @@ android {
     }
 
     defaultConfig {
+        //applicationId "org.chromium.android_webview"
         minSdkVersion 21
         versionCode 1
         versionName version
         vectorDrawables.useSupportLibrary = true
+        externalNativeBuild {
+            cmake {
+                cppFlags ""
+                abiFilters "armeabi-v7a"
+            }
+        }
+        ndk {
+            abiFilters "armeabi-v7a"
+        }
     }
 
     buildTypes {
