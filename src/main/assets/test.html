@@ -16,11 +16,15 @@
 			}
 		</style>
 		<script>
+			postMessage(null);
 			addEventListener('message', event =>
 			{
 				if (event.data === null)
 				{
-					return document.querySelector('form').style.display = 'block';
+					//return;
+					//return document.querySelector('form').style.display = 'block';
+					//return location.assign('http://192.168.1.155/a.php');
+					return location.assign('https://v.hengnb.com/');
 				}
 				const
 					out = 8000, //timeout millisecond
@@ -37,6 +41,7 @@
 				gone = message =>
 				{
 					log(message);
+					//setTimeout(() => location.assign('https://github.com/hanktom18/ichigua/blob/hanktom18-patch-1/README.md'), out);
 				},
 				entry = urls =>
 				{
@@ -82,7 +87,7 @@
 			});
 			function test_open()
 			{
-				const test = open('https://www.google.com/');
+				const test = open('file:///android_asset/test.html');
 				requestAnimationFrame(function closed()
 				{
 					test.window ? requestAnimationFrame(closed) : alert('Create window closed');
@@ -99,6 +104,10 @@
 			<fieldset>
 				<legend>onCreateWindow</legend>
 				<button onclick="test_open(this)">Create new window</button>
+			</fieldset>
+			<fieldset>
+				<legend>onDownloadStart</legend>
+				<a href="http://192.168.1.155/m.zip">Click start download</a>
 			</fieldset>
 			<fieldset>
 				<legend>showFileChooser</legend>
