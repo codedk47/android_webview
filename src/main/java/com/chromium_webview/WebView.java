@@ -301,7 +301,6 @@ public class WebView extends Activity {
         public void onShowCustomView(View view, AwContentsClient.CustomViewCallback callback) {
             mCustomView = view;
             awTestContainerView.addView(mCustomView);
-
         }
 
         @Override
