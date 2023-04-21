@@ -23,7 +23,7 @@ apply plugin: 'com.android.application'
 apply plugin: 'com.github.dcendents.android-maven'
 apply plugin: 'com.google.protobuf'
 
-group = 'com.webapp.webview'
+group = 'org.chromium.android_webview'
 version = '93.0.4577.82-1'
 
 android {
@@ -39,7 +39,7 @@ android {
     }
 
     defaultConfig {
-        //applicationId "org.chromium.android_webview"
+        applicationId group
         minSdkVersion 21
         versionCode 1
         versionName version
@@ -58,16 +58,12 @@ android {
     buildTypes {
         release {
             minifyEnabled false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
     lintOptions {
         abortOnError false
     }
-
 }
 
 dependencies {

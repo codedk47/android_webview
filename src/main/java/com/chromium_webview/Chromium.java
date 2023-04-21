@@ -1,4 +1,4 @@
-package com.webapp;
+package com.chromium_webview;
 
 import android.app.Application;
 import android.content.Context;
