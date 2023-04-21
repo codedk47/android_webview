@@ -9,7 +9,8 @@
         android:supportsRtl="true"
         android:theme="@android:style/Theme.WithActionBar">
         <activity android:name="com.chromium_webview.WebView"
-            android:exported="true">
+            android:exported="true"
+            android:configChanges="keyboardHidden|orientation|screenSize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
