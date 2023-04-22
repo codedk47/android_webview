@@ -223,7 +223,8 @@ public class WebView extends Activity {
                             awTestContainerView.getAwContents().supplyContentsForPopup(awContent);
                             if (awContents.add(awContent)) {
                                 awTestContainerView.initialize(awContent);
-                                //setContentView(awTestContainerView);
+                                setContentView(awTestContainerView);
+                                showTab();
                             }
                             return;
                         case NEW_WEBVIEW_CLOSED:
