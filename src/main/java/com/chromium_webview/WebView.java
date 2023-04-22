@@ -222,22 +222,19 @@ public class WebView extends Activity {
                             awContent = ((AwContentsTransport) msg.obj).getAwContents();
                             awTestContainerView.getAwContents().supplyContentsForPopup(awContent);
                             if (awContents.add(awContent)) {
-                                awBrowserContext.pauseTimers();
                                 awTestContainerView.initialize(awContent);
-                                setContentView(awTestContainerView);
-                                awBrowserContext.resumeTimers();
+                                //setContentView(awTestContainerView);
                             }
                             return;
                         case NEW_WEBVIEW_CLOSED:
                             awContent = awTestContainerView.getAwContents();
                             if (awContent != awContents.get(0)) {
-                                awBrowserContext.pauseTimers();
+                                awContent.removeAllJavaScriptInterface();
                                 awContent.onDetachedFromWindow();
                                 awContent.destroy();
                                 awContents.remove(awContent);
                                 awTestContainerView.initialize(awContents.get(awContents.size() - 1));
                                 setContentView(awTestContainerView);
-                                awBrowserContext.resumeTimers();
                                 showTab();
                             }
                             return;
