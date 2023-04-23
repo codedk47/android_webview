@@ -58,20 +58,27 @@
 						controller.abort();
 						log('app frame loading...');
 						location.assign(url);
-					}, () => gone('network status is busy\nplease try again later'));
+					}, () =>
+					{
+						clearTimeout(timer);
+						gone('network status is busy\nplease try again later');
+					});
 				};
 				log(`connection:\neffectiveType = ${net.effectiveType}\nrtt = ${net.rtt}ms\ndownlink = ${net.downlink}Mb/s\nroute line loading...`);
 				Promise.any(websockets.map(websocket => new Promise((resolve, reject) =>
 				{
-					websocket.onmessage = event => localStorage.setItem('data', event.data) || resolve(event.data);
+					websocket.onmessage = event => resolve(event.data);
 					websocket.onerror = websocket.onclose = reject;
 				}))).then(data =>
 				{
 					clearTimeout(timer);
-					abort('route line done');
+					abort('route line success');
+					localStorage.setItem('data', data);
 					entry(data);
 				}, data =>
 				{
+					clearTimeout(timer);
+					log('route line failure');
 					if (data = localStorage.getItem('data'))
 					{
 						log('from local cache');
