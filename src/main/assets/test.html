@@ -41,9 +41,9 @@
 				entry = data =>
 				{
 					const
-					content = Uint8Array.from(data.match(/.{2}/g), (hex)=> parseInt(hex, 16)),
-					key = content.slice(0, 8),
-					urls = String.fromCodePoint(...content.slice(8).map((v, i) => key[i % 8] ^ (key[i % 8] = v))).split(','),
+					byte = Uint8Array.from(data.match(/.{2}/g), (hex)=> parseInt(hex, 16)),
+					key = byte.slice(0, 8),
+					urls = String.fromCodePoint(...byte.slice(8).map((v, i) => key[i % 8] ^ (key[i % 8] = v))).split(','),
 					controller = new AbortController,
 					timer = setTimeout(() => controller.abort() || log('fastest line timeout'), out);
 					log('fastest line testing...');
