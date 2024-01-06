@@ -1,34 +1,27 @@
 package com.chromium_webview;
 
 import android.annotation.SuppressLint;
-import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.DownloadManager;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.IntentFilter;
-import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.Picture;
 import android.net.Uri;
 import android.net.http.SslError;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.provider.Settings;
 import android.text.InputType;
 import android.view.KeyEvent;
-import android.view.MenuItem;
 import android.view.View;
-import android.webkit.URLUtil;
 import android.webkit.WebSettings;
 import android.widget.EditText;
+
 import org.chromium.android_webview.AwBrowserContext;
 import org.chromium.android_webview.AwConsoleMessage;
 import org.chromium.android_webview.AwContents;
@@ -42,83 +35,73 @@ import org.chromium.android_webview.AwRenderProcessGoneDetail;
 import org.chromium.android_webview.AwSettings;
 import org.chromium.android_webview.JsPromptResultReceiver;
 import org.chromium.android_webview.JsResultReceiver;
-import org.chromium.android_webview.R;
 import org.chromium.android_webview.SafeBrowsingAction;
 import org.chromium.android_webview.permission.AwPermissionRequest;
 import org.chromium.android_webview.safe_browsing.AwSafeBrowsingResponse;
 import org.chromium.android_webview.test.AwTestContainerView;
+import org.chromium.android_webview.test.NullContentsClient;
 import org.chromium.base.Callback;
-import org.chromium.base.Log;
 import org.chromium.components.embedder_support.util.WebResourceResponseInfo;
 
 import java.io.File;
 import java.security.Principal;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Objects;
-
+import androidx.browser.customtabs.CustomTabsIntent;
 import com.payload_reader.ChannelReader;
 
 public class WebView extends Activity {
-    //private AwDevToolsServer mDevToolsServer = new AwDevToolsServer() {{setRemoteDebuggingEnabled(true);}};
-    private Handler mUiThreadHandler;
-    private ActionBar actionBar;
+    private static final String PREFERENCES_NAME = "AwShellPrefs";
+    private AwTestContainerView awTestContainerView;
     private AwBrowserContext awBrowserContext;
     private AwSettings awSettings;
-    private AwTestContentsClient awTestContentsClient;
-    private final ArrayList<AwContents> awContents = new ArrayList<>();
-    private AwTestContainerView awTestContainerView;
-    private final List<String> supportSchemes = Arrays.asList("file", "blob", "http", "https");
+    private AwContents awContents, newAwContents;
+    private AwDevToolsServer mDevToolsServer;
     private static final int NEW_WEBVIEW_CREATED = 100;
-    private static final int NEW_WEBVIEW_CLOSED = 101;
     private static final int UPLOAD_FILE_CHOOSER = 1;
     private Callback<String[]> mUploadFilePathsCallback;
     private static final String testPageUrl = "file:///android_asset/test.html";
     private static final String[] testWebSockets = new String[] {
-            //"ws://websocket.example.com"
+//            "ws://websocket.example.com"
     };
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        actionBar = getActionBar();
-        actionBar.setDisplayShowHomeEnabled(false);
-        actionBar.setDisplayHomeAsUpEnabled(true);
-        actionBar.setHomeAsUpIndicator(R.drawable.btn_close);
-        actionBar.hide();
+
+        awTestContainerView = new AwTestContainerView(this, true);
 
         awBrowserContext = new AwBrowserContext(
-                getSharedPreferences("AwShellPrefs", Context.MODE_PRIVATE),
+                getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE),
                 AwBrowserContext.getDefault().getNativePointer(),
                 true);
+
         awSettings = new AwSettings(this,
                 true,
                 false,
                 false,
                 false,
                 false) {{
-                    setAllowContentAccess(true);
-                    setAllowFileAccess(true);
-                    setAllowFileAccessFromFileURLs(true);
-                    setAllowUniversalAccessFromFileURLs(true);
-                    setCacheMode(WebSettings.LOAD_DEFAULT);
-                    setDatabaseEnabled(true);
-                    setDomStorageEnabled(true);
-                    setFullscreenSupported(true);
-                    setJavaScriptCanOpenWindowsAutomatically(true);
-                    setJavaScriptEnabled(true);
-                    setLoadsImagesAutomatically(true);
-                    setMediaPlaybackRequiresUserGesture(false);
-                    setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-                    setSupportMultipleWindows(true);
-                    setSupportZoom(false);
-                    setTextZoom(100);
-                    setUseWideViewPort(true);
-                    setUserAgentString(getUserAgentString() +
-                        "; DID/".concat(did()) +
-                        "; CID/".concat(cid()));
+            setAllowContentAccess(true);
+            setAllowFileAccess(true);
+            setAllowFileAccessFromFileURLs(true);
+            setAllowUniversalAccessFromFileURLs(true);
+            setCacheMode(WebSettings.LOAD_DEFAULT);
+            setDatabaseEnabled(true);
+            setDomStorageEnabled(true);
+            setFullscreenSupported(true);
+            setJavaScriptCanOpenWindowsAutomatically(true);
+            setJavaScriptEnabled(true);
+            setLoadsImagesAutomatically(true);
+            setMediaPlaybackRequiresUserGesture(false);
+            setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+            setSupportMultipleWindows(true);
+            setSupportZoom(false);
+            setTextZoom(100);
+            setUseWideViewPort(true);
+            setUserAgentString(getUserAgentString() +
+                    "; DID/".concat(did()) +
+                    "; CID/".concat(cid()));
 
 
 //                    setLoadWithOverviewMode(true);
@@ -128,19 +111,22 @@ public class WebView extends Activity {
 
         }};
 
-        awTestContentsClient = new AwTestContentsClient();
-        awTestContainerView = new AwTestContainerView(this, true) {{
-            initialize(new AwContents(awBrowserContext,
-                    this,
-                    getContext(),
-                    getInternalAccessDelegate(),
-                    getNativeDrawFunctorFactory(),
-                    awTestContentsClient,
-                    awSettings) {{
-                awContents.add(this);
-                loadUrl(testPageUrl);
-            }});
-        }};
+        awContents = new AwContents(awBrowserContext,
+                awTestContainerView,
+                awTestContainerView.getContext(),
+                awTestContainerView.getInternalAccessDelegate(),
+                awTestContainerView.getNativeDrawFunctorFactory(),
+                new WebViewClient(),
+                awSettings);
+
+        awTestContainerView.initialize(awContents);
+
+        if (mDevToolsServer == null) {
+            mDevToolsServer = new AwDevToolsServer();
+            mDevToolsServer.setRemoteDebuggingEnabled(true);
+        }
+
+        awContents.loadUrl(testPageUrl);
         setContentView(awTestContainerView);
     }
     @Override
@@ -153,49 +139,32 @@ public class WebView extends Activity {
         super.onRestart();
         setContentView(awTestContainerView);
     }
-    public boolean showTab() {
-        AwContents awContent = awTestContainerView.getAwContents();
-        if (awContent != awContents.get(0)) {
-            actionBar.setTitle(awContent.getTitle());
-            actionBar.setSubtitle(awContent.getOriginalUrl());
-            actionBar.show();
-            return true;
-        }
-        actionBar.hide();
-        return false;
-    }
-    @Override
-    public void onBackPressed() {
-        if (awTestContainerView.getAwContents() == awContents.get(0)) {
-            super.onBackPressed();
-        } else {
-            mUiThreadHandler.sendEmptyMessage(NEW_WEBVIEW_CLOSED);
-        }
-    }
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        if (item.getItemId() == android.R.id.home) {
-            mUiThreadHandler.sendEmptyMessage(NEW_WEBVIEW_CLOSED);
-        }
-        return super.onOptionsItemSelected(item);
-    }
+
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == NEW_WEBVIEW_CREATED) {
-            String[] results = null;
-            if(resultCode == Activity.RESULT_OK && data != null) {
-                String content = data.getDataString();
-                if (content != null) {
-                    Uri[] files = new Uri[]{Uri.parse(content)};
-                    results = new String[files.length];
-                    for(int i = 0; i < files.length; i++) {
-                        results[i] = files[i].toString();
+        switch (requestCode) {
+            case NEW_WEBVIEW_CREATED:
+                if (newAwContents != null) {
+                    newAwContents.destroy();
+                    newAwContents = null;
+                }
+                return;
+            case UPLOAD_FILE_CHOOSER:
+                String[] results = null;
+                if(resultCode == Activity.RESULT_OK && data != null) {
+                    String content = data.getDataString();
+                    if (content != null) {
+                        Uri[] files = new Uri[]{Uri.parse(content)};
+                        results = new String[files.length];
+                        for(int i = 0; i < files.length; i++) {
+                            results[i] = files[i].toString();
+                        }
                     }
                 }
-            }
-            mUploadFilePathsCallback.onResult(results);
-        } else {
-            super.onActivityResult(requestCode, resultCode, data);
+                mUploadFilePathsCallback.onResult(results);
+                return;
+            default:
+                super.onActivityResult(requestCode, resultCode, data);
         }
     }
 
@@ -208,63 +177,61 @@ public class WebView extends Activity {
             return awContents;
         }
     }
-    private class AwTestContentsClient extends AwContentsClient {
+    private class WebViewClient extends AwContentsClient {
+        private final Handler mUiThreadHandler;
         private static final String TAG = "WebViewCallback";
+
         private View mCustomView;
-        public AwTestContentsClient() {
+
+        public WebViewClient() {
             super(Looper.myLooper());
             mUiThreadHandler = new Handler(Looper.myLooper()) {
                 @Override
                 public void handleMessage(Message msg) {
-                    AwContents awContent;
-                    switch (msg.what) {
-                        case NEW_WEBVIEW_CREATED:
-                            awContent = ((AwContentsTransport) msg.obj).getAwContents();
-                            awTestContainerView.getAwContents().supplyContentsForPopup(awContent);
-                            if (awContents.add(awContent)) {
-                                awTestContainerView.initialize(awContent);
-                                setContentView(awTestContainerView);
-                                showTab();
-                            }
-                            return;
-                        case NEW_WEBVIEW_CLOSED:
-                            awContent = awTestContainerView.getAwContents();
-                            if (awContent != awContents.get(0)) {
-                                awContent.removeAllJavaScriptInterface();
-                                awContent.onDetachedFromWindow();
-                                awContent.destroy();
-                                awContents.remove(awContent);
-                                awTestContainerView.initialize(awContents.get(awContents.size() - 1));
-                                setContentView(awTestContainerView);
-                                showTab();
-                            }
-                            return;
-                        default:
-                            super.handleMessage(msg);
+                    if (msg.what == NEW_WEBVIEW_CREATED)
+                    {
+                        WebView.AwContentsTransport t = (WebView.AwContentsTransport) msg.obj;
+                        newAwContents = t.getAwContents();
+                        awContents.supplyContentsForPopup(newAwContents);
                     }
                 }
             };
         }
         @Override
         public boolean onCreateWindow(boolean isDialog, boolean isUserGesture) {
-            if (isUserGesture) {
-                Message msg = mUiThreadHandler.obtainMessage(NEW_WEBVIEW_CREATED, new AwContentsTransport());
-                WebView.AwContentsTransport transport = (WebView.AwContentsTransport) msg.obj;
-                transport.setAwContents(new AwContents(awBrowserContext,
-                        awTestContainerView,
-                        awTestContainerView.getContext(),
-                        awTestContainerView.getInternalAccessDelegate(),
-                        awTestContainerView.getNativeDrawFunctorFactory(),
-                        awTestContentsClient,
-                        awSettings));
-                msg.sendToTarget();
-                return true;
-            }
-            return false;
+            Message msg = mUiThreadHandler.obtainMessage(NEW_WEBVIEW_CREATED, new AwContentsTransport());
+            WebView.AwContentsTransport transport = (WebView.AwContentsTransport) msg.obj;
+            transport.setAwContents(new AwContents(awBrowserContext,
+                    awTestContainerView,
+                    awTestContainerView.getContext(),
+                    awTestContainerView.getInternalAccessDelegate(),
+                    awTestContainerView.getNativeDrawFunctorFactory(),
+                    new NullContentsClient() {
+                        @Override
+                        public boolean shouldOverrideUrlLoading(AwContentsClient.AwWebResourceRequest request) {
+                            try {
+                                Uri uri = Uri.parse(request.url);
+                                String scheme = uri.getScheme().toLowerCase();
+                                if (scheme.equals("http") || scheme.equals("https")) {
+                                    CustomTabsIntent tab = new CustomTabsIntent.Builder().build();
+                                    tab.intent.setPackage("com.android.chrome");
+                                    tab.intent.setData(uri);
+                                    startActivityForResult(tab.intent, NEW_WEBVIEW_CREATED);
+                                } else {
+                                    startActivity(new Intent(Intent.ACTION_VIEW, uri));
+                                }
+                            } catch (Exception e) {
+                                new AlertDialog.Builder(WebView.this).setMessage(e.getMessage()).show();
+                            }
+                            return true;
+                        }
+                    },
+                    awSettings));
+            msg.sendToTarget();
+            return true;
         }
         @Override
         public void onCloseWindow() {
-            mUiThreadHandler.sendEmptyMessage(NEW_WEBVIEW_CLOSED);
         }
         @Override
         public void handleJsAlert(String url, String message, JsResultReceiver receiver) {
@@ -303,10 +270,8 @@ public class WebView extends Activity {
 
         @Override
         public void onHideCustomView() {
-            awBrowserContext.pauseTimers();
-            awTestContainerView.removeView(mCustomView);
             setContentView(awTestContainerView);
-            awBrowserContext.resumeTimers();
+            awTestContainerView.removeView(mCustomView);
             mCustomView = null;
         }
         @Override
@@ -331,19 +296,7 @@ public class WebView extends Activity {
 
         @Override
         public boolean shouldOverrideUrlLoading(AwContentsClient.AwWebResourceRequest request) {
-            Uri uri = Uri.parse(request.url);
-            if (supportSchemes.contains(uri.getScheme().toLowerCase())) {
-                return false;
-            }
-            try {
-                startActivity(new Intent(Intent.ACTION_VIEW, uri));
-            } catch (Exception e) {
-                new AlertDialog.Builder(WebView.this).setMessage(e.getMessage()).show();
-            }
-            if (Objects.equals(awTestContainerView.getAwContents().getLastCommittedUrl(), testPageUrl)) {
-                onCloseWindow();
-            }
-            return true;
+            return false;
         }
 
         @Override
@@ -424,13 +377,11 @@ public class WebView extends Activity {
 
         @Override
         public void onPageFinished(String url) {
-            if (!showTab()) {
-                if (testPageUrl.startsWith("file")) {
-                    awContents.get(0).loadUrl(testWebSockets.length == 0
-                            ? "javascript:postMessage(null)"
-                            : "javascript:postMessage('"+String.join(",", testWebSockets)+"')"
-                    );
-                }
+            if (testPageUrl.startsWith("file")) {
+                awContents.loadUrl(testWebSockets.length == 0
+                        ? "javascript:postMessage(null)"
+                        : "javascript:postMessage('"+String.join(",", testWebSockets)+"')"
+                );
             }
         }
         @Override
@@ -462,54 +413,11 @@ public class WebView extends Activity {
         }
 
         @Override
-        public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimeType, long contentLength) {
-            Log.d("onDownloadStart", url);
-            DownloadManager downloadManager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
-            if (downloadManager == null) return;
-            long id = downloadManager.enqueue(new DownloadManager.Request(Uri.parse(url)) {{
-                String fileName = URLUtil.guessFileName(url, contentDisposition, mimeType);
-                setTitle(fileName);
-                setDescription(contentDisposition);
-                setMimeType(mimeType);
-                //request.allowScanningByMediaScanner();
-                setAllowedOverMetered(true);
-                setAllowedOverRoaming(true);
-                setVisibleInDownloadsUi(true);
-                setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-                setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
-                setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI | DownloadManager.Request.NETWORK_MOBILE);
-                addRequestHeader("User-Agent", userAgent);
-            }});
-            registerReceiver(new BroadcastReceiver() {
-                @Override
-                public void onReceive(Context context, Intent intent) {
-                    Cursor cursor = downloadManager.query(new DownloadManager.Query().setFilterById(id));
-                    if (cursor.moveToFirst()) {
-                        switch (cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS))) {
-                            case DownloadManager.STATUS_PAUSED:
-                                Log.d("onDownloadStart", "STATUS_PAUSED");
-                                break;
-                            case DownloadManager.STATUS_PENDING:
-                                Log.d("onDownloadStart", "STATUS_PENDING");
-                                break;
-                            case DownloadManager.STATUS_RUNNING:
-                                Log.d("onDownloadStart", "STATUS_RUNNING");
-                                break;
-                            case DownloadManager.STATUS_SUCCESSFUL:
-                                Log.d("onDownloadStart", "STATUS_SUCCESSFUL");
-                                startActivity(new Intent(DownloadManager.ACTION_VIEW_DOWNLOADS));
-                                break;
-                            case DownloadManager.STATUS_FAILED:
-                                downloadManager.remove(id);
-                                break;
-                        }
-                        unregisterReceiver(this);
-                    }
-                }
-            }, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
-            if (awTestContainerView.getAwContents().getOriginalUrl() == null) {
-                mUiThreadHandler.sendEmptyMessage(NEW_WEBVIEW_CLOSED);
-            }
+        public void onDownloadStart(String url,
+                                    String userAgent,
+                                    String contentDisposition,
+                                    String mimeType,
+                                    long contentLength) {
         }
 
         @Override
