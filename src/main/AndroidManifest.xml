@@ -7,7 +7,7 @@
         android:icon="@drawable/icon"
         android:label="webview"
         android:supportsRtl="true"
-        android:theme="@android:style/Theme.WithActionBar">
+        android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
         <activity android:name="com.chromium_webview.WebView"
             android:exported="true"
             android:configChanges="keyboardHidden|orientation|screenSize">
